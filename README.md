@@ -30,5 +30,7 @@ Drawing on social psychology, affective neuroscience, and literary theory, the m
 | [`README.md`](./README.md)          | Project documentation (this file)                        |
 
 
+---
 
+Note: This README.md was written with the assistance of AI (ChatGPT) to ensure clarity, structure, and alignment with academic documentation standards. All content reflects the author's original project and model implementation.
 
