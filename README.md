@@ -23,8 +23,12 @@ Drawing on social psychology, affective neuroscience, and literary theory, the m
 
 ## File Structure
 
-Frankenstein-Moral-Drift/
-├── [model.py](./model.py)            # Main model logic and environment
-├── [agent.py](./agent.py)            # Definitions for Creature and Human agents
+| Path                                 | Description                                              |
+|--------------------------------------|----------------------------------------------------------|
+| [`model.py`](./model.py)            | Main model logic and environment                         |
+| [`agent.py`](./agent.py)            | Definitions for Creature and Human agents                |
+| [`README.md`](./README.md)          | Project documentation (this file)                        |
+
+
 
 
