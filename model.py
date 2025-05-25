@@ -1,110 +1,101 @@
-"""
-Frankenstein Moral-Drift ABM 
+# model.py
 
-• 10×10 MultiGrid with four landmark cells:
-     0 = forest, 1 = village, 2 = cottage, 3 = market
-• Single CreatureAgent moves each step; humans are fixed.
-• DataCollector logs empathy, resentment, and moral state.
-
-"""
-
-# ------------------------------------------------------------------
-
-from mesa import Model
-from mesa.space import MultiGrid
-from mesa.time import RandomActivation
-from mesa.datacollection import DataCollector
+import networkx as nx
 import random
+import mesa
+from mesa.space import NetworkGrid
+from mesa.datacollection import DataCollector
+from agent import CreatureAgent, HumanAgent
 
-from ABM_Frankenstein.agent import CreatureAgent, HumanAgent
-
-
-class FrankensteinModel(Model):
+class FrankensteinNetworkModel(mesa.Model):
     """
-    Parameters
-    ----------
-    n_humans       : int   total number of humans
-    pct_fearful    : float proportion of humans that are fearful (0–1)
-    pct_neutral    : float proportion neutral
-                     remaining humans are compassionate
-    emp_threshold  : int   empathy level below which Creature can flip
-    res_threshold  : int   resentment level above which Creature can flip
-    seed           : int   optional RNG seed for reproducibility
+    Network-based Frankenstein Moral Drift ABM using updated Mesa API (no mesa.time).
+    - Uses NetworkGrid for social links.
+    - Uses mesa.Model.agents.shuffle_do() to advance agent steps.
+    - Collects data on agent states and trust scores.
     """
-
     def __init__(
         self,
-        n_humans=15,
-        pct_fearful=0.80,
-        pct_neutral=0.15,
-        emp_threshold=3,
-        res_threshold=7,
-        width=10,
-        height=10,
-        seed=None,
+        n_humans=30,
+        fearful_frac=0.4,
+        compassionate_frac=0.2,
+        avg_degree=4,
+        rewiring_prob=0.1,
+        initial_edges=3,
+        max_emotion=10,
+        res_threshold=None,
+        emp_threshold=None,
+        seed=None
     ):
-        super().__init__()
-        if seed is not None:
-            random.seed(seed)
-            self.seed = seed
+        super().__init__(seed=seed)
 
-        # ---- Model-level parameters ---------------------------------
-        self.emp_threshold = emp_threshold
+        if res_threshold is None:
+            res_threshold = 0.75 * max_emotion
+        if emp_threshold is None:
+            emp_threshold = 0.25 * max_emotion
+
         self.res_threshold = res_threshold
+        self.emp_threshold = emp_threshold
 
-        # ---- Grid & scheduler ---------------------------------------
-        self.grid = MultiGrid(width, height, torus=False)
-        self.schedule = RandomActivation(self)
+        self.n_humans = n_humans
+        self.fearful_frac = fearful_frac
+        self.compassionate_frac = compassionate_frac
+        self.avg_degree = avg_degree
+        self.rewiring_prob = rewiring_prob
+        self.initial_edges = initial_edges
 
-        # ---- Landmark coordinates -----------------------------------
-        # (forest, village, cottage, market)
-        self.landmarks = [(1, 1), (8, 1), (1, 8), (8, 8)]
+        # Create a Watts-Strogatz small-world graph
+        k = avg_degree if avg_degree % 2 == 0 else avg_degree + 1
+        self.G = nx.watts_strogatz_graph(n_humans, k, rewiring_prob)
+        self.grid = NetworkGrid(self.G)
 
-        # ---- Create Creature ----------------------------------------
-        self.creature = CreatureAgent("Creature", self)
-        self.schedule.add(self.creature)
-        self.grid.place_agent(self.creature, self.landmarks[0])  # start in forest
-
-        # ---- Create Human population --------------------------------
-        n_fear = int(pct_fearful * n_humans)
-        n_neu = int(pct_neutral * n_humans)
-        n_comp = n_humans - n_fear - n_neu
-
-        human_types = (
-            ["fearful"] * n_fear + ["neutral"] * n_neu + ["compassionate"] * n_comp
-        )
-        random.shuffle(human_types)
-
-        for i, h_type in enumerate(human_types):
-            h = HumanAgent(f"H{i}", self, h_type=h_type)
-            self.schedule.add(h)
-            # Place humans randomly at landmarks (they stay put)
-            self.grid.place_agent(h, random.choice(self.landmarks))
-
-        # ---- Data Collector -----------------------------------------
+        # Data collection setup
         self.datacollector = DataCollector(
             model_reporters={
-                "Step": lambda m: m.schedule.time,
-                "Creature_state": lambda m: m.creature.state,
-                "Creature_empathy": lambda m: m.creature.empathy,
-                "Creature_resentment": lambda m: m.creature.resentment,
-            },
-            agent_reporters={
-                # Save just for Creature; Humans return None
-                "empathy": lambda a: getattr(a, "empathy", None),
-                "resentment": lambda a: getattr(a, "resentment", None),
-            },
+                "Fearful": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust < 0),
+                "Neutral": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust == 0),
+                "Compassionate": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust > 0),
+                "Creature State": lambda m: next(a.state for a in m.agents if isinstance(a, CreatureAgent))
+            }
         )
 
-    # ----------------------------------------------------------------
-    # One simulation tick
-    # ----------------------------------------------------------------
-    def step(self):
+        # Create and place HumanAgents
+        for node in self.G.nodes():
+            r = random.random()
+            if r < fearful_frac:
+                h_type = "fearful"
+            elif r < fearful_frac + compassionate_frac:
+                h_type = "compassionate"
+            else:
+                h_type = "neutral"
+
+            human = HumanAgent(node, self, h_type)
+            self.grid.place_agent(human, node)
+            self.agents.append(human)
+
+        # Add the Creature node
+        creature_node = "creature"
+        self.G.add_node(creature_node)
+        target_nodes = random.sample(list(self.G.nodes - {creature_node}), k=initial_edges)
+        for target in target_nodes:
+            self.G.add_edge(creature_node, target)
+
+        creature = CreatureAgent(creature_node, self)
+        self.grid.place_agent(creature, creature_node)
+        self.agents.append(creature)
+
+        self.running = True
         self.datacollector.collect(self)
-        self.schedule.step()
 
+    def step(self):
+        # Creature moves along a random edge
+        creature = next(a for a in self.agents if isinstance(a, CreatureAgent))
+        neighbors = list(self.G.neighbors(creature.unique_id))
+        if neighbors:
+            self.grid.move_agent(creature, random.choice(neighbors))
 
-    def run_model(self, steps=50):
-        for _ in range(steps):
-            self.step()
-        return self.datacollector.get_model_vars_dataframe()
+        # Agents take their steps (shuffle_do is the new scheduler)
+        self.agents.shuffle_do("step")
+
+        # Collect data
+        self.datacollector.collect(self)
