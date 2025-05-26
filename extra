@@ -1,0 +1,10 @@
+TL;DR – What to Try
+ Set max_emotion=20
+
+ Bump up initial_edges and avg_degree
+
+ Run slower or increase Render Interval to watch trust shifts
+
+ Optionally graph empathy and resentment over time
+
+Let me know if you'd like a helper plot for emotions — I can give you a quick EmpathyResentmentPlot to track that!

@@ -25,16 +25,27 @@ def agent_portrayal(agent):
             CreatureState.CAUTIOUS: "purple",
             CreatureState.VENGEFUL: "red",
         }
-        return state_color[agent.state]
+        return {
+            "color": state_color[agent.state],
+            "size": 300,  # much larger than humans
+            "edgecolors": "white",  # optional outline
+            "linewidths": 1.5,
+            "marker": "s",  # square shape
+        }
+
   
     elif isinstance(agent, HumanAgent):
-        if agent.trust < 0:
-            return "#D55E00"  # red-orange
-        elif agent.trust == 0:
-            return "#999999"  # gray
-        else:
-            return "#009E73"  # teal-green
-    return "#000000"  # fallback black
+        trust_color = (
+            "#D55E00" if agent.trust < 0 else
+            "#999999" if agent.trust == 0 else
+            "#009E73"
+        )
+        return {
+            "color": trust_color,
+            "size": 100,
+            "marker": "o",  # default circle
+        }
+
 
 @solara.component
 def NetPlot(model):
@@ -71,16 +82,36 @@ Chart = make_plot_component({
     "Compassionate": "#009E73"
 })
 
+def post_process_creature_plot(ax):
+    ax.set_ylim(-0.2, 2.2)
+    ax.set_yticks([0, 1, 2])
+    ax.set_yticklabels(["Peaceful", "Cautious", "Vengeful"])
+    ax.set_ylabel("Creature State")
+
+CreatureStatePlot = make_plot_component(
+    {"Creature State": "black"},
+    post_process=post_process_creature_plot
+)
+
+
 # Initialize the model
 model1 = FrankensteinNetworkModel()
+
+def display_creature_state(model):
+    creature = next(a for a in model.agents if isinstance(a, CreatureAgent))
+    return solara.Text(f"Creature is currently: {creature.get_display_state()}")
+
 
 # Create Solara app layout
 page = SolaraViz(
     model1,
     components=[
         NetPlot,
-        Chart
-    ],
+        Chart,
+        CreatureStatePlot,
+        display_creature_state,
+],
+
     model_params=model_params,
     name="Frankenstein Moral Drift"
 )

@@ -57,7 +57,8 @@ class FrankensteinNetworkModel(mesa.Model):
                 "Fearful": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust < 0),
                 "Neutral": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust == 0),
                 "Compassionate": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust > 0),
-                "Creature State": lambda m: next(a.state for a in m.agents if isinstance(a, CreatureAgent))
+                "Creature State": lambda m: next(a.state.value for a in m.agents if isinstance(a, CreatureAgent))
+
             }
         )
 

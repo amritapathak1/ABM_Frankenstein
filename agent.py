@@ -64,14 +64,20 @@ class HumanAgent(mesa.Agent):
         """
         Convert fearful neighbors to neutral via trust signal.
         """
-
         if not getattr(self.model, "enable_broadcast", True):
-            return  
+            return
 
         for nid in self.model.grid.get_neighbors(self.pos, include_center=False):
-            for agent in self.model.grid.get_cell_list_contents([nid]):
+            try:
+                agents = self.model.grid.get_cell_list_contents([nid])
+            except KeyError:
+                continue  # skip nodes that don't exist
+
+            for agent in agents:
                 if isinstance(agent, HumanAgent) and agent.trust == TrustLevel.FEARFUL.value:
                     agent.trust = TrustLevel.NEUTRAL.value
+
+
 
 
     def step(self):
