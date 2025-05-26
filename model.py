@@ -47,6 +47,8 @@ class FrankensteinNetworkModel(mesa.Model):
         # Create a Watts-Strogatz small-world graph
         k = avg_degree if avg_degree % 2 == 0 else avg_degree + 1
         self.G = nx.watts_strogatz_graph(n_humans, k, rewiring_prob)
+        creature_node = "creature"
+        self.G.add_node(creature_node)
         self.grid = NetworkGrid(self.G)
 
         # Data collection setup
@@ -71,18 +73,18 @@ class FrankensteinNetworkModel(mesa.Model):
 
             human = HumanAgent(node, self, h_type)
             self.grid.place_agent(human, node)
-            self.agents.append(human)
+            self.agents.add(human)
 
         # Add the Creature node
-        creature_node = "creature"
-        self.G.add_node(creature_node)
+        
         target_nodes = random.sample(list(self.G.nodes - {creature_node}), k=initial_edges)
         for target in target_nodes:
             self.G.add_edge(creature_node, target)
 
         creature = CreatureAgent(creature_node, self)
         self.grid.place_agent(creature, creature_node)
-        self.agents.append(creature)
+        self.agents.add(creature)
+
 
         self.running = True
         self.datacollector.collect(self)

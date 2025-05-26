@@ -19,18 +19,13 @@ class HumanAgent(mesa.Agent):
     - learns harmlessness on peaceful meets
     - broadcasts trust update to neighbors
     """
-    def __init__(self, unique_id, model, h_type="neutral"):
-        # Initialize agent
+    def __init__(self, unique_id, model, h_type=TrustLevel.NEUTRAL):
+        # Directly assign, ensure .pos exists for NetworkGrid
         self.unique_id = unique_id
         self.model = model
-        self.pos = None  # for NetworkGrid
-        # Accept either string or TrustLevel
-        if isinstance(h_type, str):
-            # Map lowercase string to enum
-            self.h_type = TrustLevel[h_type.upper()]
-        else:
-            self.h_type = h_type
-        self.trust = self.h_type.value
+        self.pos = None
+        self.h_type = h_type
+        self.trust = h_type.value
 
     def interact(self, creature_state: CreatureState) -> str:
         # Vengeful creature resets trust, always rejects
@@ -50,29 +45,12 @@ class HumanAgent(mesa.Agent):
         if self.trust == TrustLevel.FEARFUL.value and outcome == "accept":
             self.trust = TrustLevel.NEUTRAL.value
 
-    
-    # def broadcast_trust(self):
-    #     """
-    #     Convert fearful neighbors to neutral via trust signal.
-    #     """
-    #     neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-    #     for agent in neighbors:
-    #         if isinstance(agent, HumanAgent) and agent.trust == TrustLevel.FEARFUL.value:
-    #             agent.trust = TrustLevel.NEUTRAL.value
-
     def broadcast_trust(self):
-        """
-        Convert fearful neighbors to neutral via trust signal.
-        """
-
-        if not getattr(self.model, "enable_broadcast", True):
-            return  
-
+        # Convert fearful neighbors to neutral
         for nid in self.model.grid.get_neighbors(self.pos, include_center=False):
             for agent in self.model.grid.get_cell_list_contents([nid]):
                 if isinstance(agent, HumanAgent) and agent.trust == TrustLevel.FEARFUL.value:
                     agent.trust = TrustLevel.NEUTRAL.value
-
 
     def step(self):
         # Passive: broadcasting happens immediately after learning in Creature.interact()
@@ -92,7 +70,6 @@ class CreatureAgent(mesa.Agent):
         self.empathy = empathy_init
         self.resentment = resentment_init
         self.state = CreatureState.PEACEFUL
-        self.enable_broadcast = True  
 
     def move(self):
         # Hop to a random connected node
@@ -131,6 +108,3 @@ class CreatureAgent(mesa.Agent):
     def step(self):
         self.move()
         self.interact()
-
-    def get_display_state(self):
-        return self.state.name.capitalize()

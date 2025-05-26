@@ -2,7 +2,7 @@ import mesa
 import solara
 import networkx as nx
 from matplotlib.figure import Figure
-from agent import CreatureAgent, HumanAgent
+from agent import CreatureAgent, HumanAgent, CreatureState
 from model import FrankensteinNetworkModel
 from mesa.visualization import Slider, SolaraViz, make_plot_component
 from mesa.visualization.utils import update_counter
@@ -20,7 +20,13 @@ model_params = {
 # Color scheme (colorblind friendly)
 def agent_portrayal(agent):
     if isinstance(agent, CreatureAgent):
-        return "#E69F00"  # orange
+        state_color = {
+            CreatureState.PEACEFUL: "black",
+            CreatureState.CAUTIOUS: "purple",
+            CreatureState.VENGEFUL: "red",
+        }
+        return state_color[agent.state]
+  
     elif isinstance(agent, HumanAgent):
         if agent.trust < 0:
             return "#D55E00"  # red-orange
