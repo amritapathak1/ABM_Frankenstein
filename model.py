@@ -25,6 +25,7 @@ class FrankensteinNetworkModel(mesa.Model):
         max_emotion=10,
         res_threshold=None,
         emp_threshold=None,
+        enable_broadcast=False,
         seed=None
     ):
         super().__init__(seed=seed)
@@ -36,6 +37,7 @@ class FrankensteinNetworkModel(mesa.Model):
 
         self.res_threshold = res_threshold
         self.emp_threshold = emp_threshold
+        self.enable_broadcast = enable_broadcast
 
         self.n_humans = n_humans
         self.fearful_frac = fearful_frac
@@ -54,16 +56,34 @@ class FrankensteinNetworkModel(mesa.Model):
         # Data collection setup
         self.datacollector = DataCollector(
             model_reporters={
-                "Fearful": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust < 0),
-                "Neutral": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust == 0),
-                "Compassionate": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust > 0),
+                "Fearful": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust <= -0.5),
+                "Neutral": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and -0.5 < a.trust < 0.5),
+                "Compassionate": lambda m: sum(1 for a in m.agents if isinstance(a, HumanAgent) and a.trust >= 0.5),
+                # "Creature State": lambda m: next(a.state.value for a in m.agents if isinstance(a, CreatureAgent))
                 "Creature State": lambda m: next(a.state.value for a in m.agents if isinstance(a, CreatureAgent))
-
             }
         )
 
-        # Create and place HumanAgents
+        # Add the Creature node
+        # target_nodes = random.sample(list(self.G.nodes - {creature_node}), k=initial_edges)
+        # target_nodes = random.sample(list(self.G.nodes - {creature_node}), k=min(initial_edges, len(self.G.nodes) - 1))
+        target_nodes = random.sample(
+            [n for n in self.G.nodes if n != creature_node],
+            k=self.avg_degree
+        )
+
+        for target in target_nodes:
+            self.G.add_edge(creature_node, target)
+
+        creature = CreatureAgent(creature_node, self)
+        self.grid.place_agent(creature, creature_node)
+        self.agents.add(creature)
+
+        # Create and place HumanAgents (skip creature's node)
         for node in self.G.nodes():
+            if node == creature_node:
+                continue  # Do not overwrite the creature!
+
             r = random.random()
             if r < fearful_frac:
                 h_type = "fearful"
@@ -72,20 +92,9 @@ class FrankensteinNetworkModel(mesa.Model):
             else:
                 h_type = "neutral"
 
-            human = HumanAgent(node, self, h_type)
+            human = HumanAgent(node, self, h_type, enable_broadcast=self.enable_broadcast)
             self.grid.place_agent(human, node)
             self.agents.add(human)
-
-        # Add the Creature node
-        
-        target_nodes = random.sample(list(self.G.nodes - {creature_node}), k=initial_edges)
-        for target in target_nodes:
-            self.G.add_edge(creature_node, target)
-
-        creature = CreatureAgent(creature_node, self)
-        self.grid.place_agent(creature, creature_node)
-        self.agents.add(creature)
-
 
         self.running = True
         self.datacollector.collect(self)

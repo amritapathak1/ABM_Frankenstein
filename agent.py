@@ -19,9 +19,12 @@ class HumanAgent(mesa.Agent):
     - learns harmlessness on peaceful meets
     - broadcasts trust update to neighbors
     """
-    def __init__(self, unique_id, model, h_type="neutral"):
+    # def __init__(self, unique_id, model, h_type="neutral"):
+    def __init__(self, unique_id, model, h_type="neutral", enable_broadcast=False):
+
         # Initialize agent
         self.unique_id = unique_id
+        self.enable_broadcast = enable_broadcast
         self.model = model
         self.pos = None  # for NetworkGrid
         # Accept either string or TrustLevel
@@ -30,7 +33,7 @@ class HumanAgent(mesa.Agent):
             self.h_type = TrustLevel[h_type.upper()]
         else:
             self.h_type = h_type
-        self.trust = self.h_type.value
+        self.trust = float(self.h_type.value)
 
     def interact(self, creature_state: CreatureState) -> str:
         # Vengeful creature resets trust, always rejects
@@ -62,22 +65,28 @@ class HumanAgent(mesa.Agent):
 
     def broadcast_trust(self):
         """
-        Convert fearful neighbors to neutral via trust signal.
+        Nudge neighbors toward compassion if broadcasting is enabled.
         """
-        if not getattr(self.model, "enable_broadcast", True):
+        if not self.enable_broadcast or self.trust <= 0:
             return
 
-        for nid in self.model.grid.get_neighbors(self.pos, include_center=False):
-            try:
-                agents = self.model.grid.get_cell_list_contents([nid])
-            except KeyError:
-                continue  # skip nodes that don't exist
-
+        neighbor_ids = self.model.grid.get_neighbors(self.pos, include_center=False)
+        for nid in neighbor_ids:
+            agents = self.model.grid.get_cell_list_contents([nid])
             for agent in agents:
-                if isinstance(agent, HumanAgent) and agent.trust == TrustLevel.FEARFUL.value:
-                    agent.trust = TrustLevel.NEUTRAL.value
+                if isinstance(agent, HumanAgent) and agent.trust < self.trust:
+                    agent.trust = min(agent.trust + 0.1, 1.0)  # Cap at +1.0
 
 
+    def get_trust_label(self):
+        """Map continuous trust to categorical label for visualization."""
+    
+        if self.trust <= -0.5:
+            return "fearful"
+        elif self.trust >= 0.5:
+            return "compassionate"
+        else:
+            return "neutral"
 
 
     def step(self):
@@ -114,8 +123,9 @@ class CreatureAgent(mesa.Agent):
                 outcome = obj.interact(self.state)
                 self.update_emotions(outcome)
                 obj.learn(outcome)
-                if outcome == "accept" and obj.trust == TrustLevel.NEUTRAL.value:
+                if outcome == "accept":
                     obj.broadcast_trust()
+
 
     def update_emotions(self, outcome: str):
         if outcome == "accept":
