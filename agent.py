@@ -54,15 +54,6 @@ class HumanAgent(mesa.Agent):
             self.trust = TrustLevel.NEUTRAL.value
 
     
-    # def broadcast_trust(self):
-    #     """
-    #     Convert fearful neighbors to neutral via trust signal.
-    #     """
-    #     neighbors = self.model.grid.get_neighbors(self.pos, include_center=False)
-    #     for agent in neighbors:
-    #         if isinstance(agent, HumanAgent) and agent.trust == TrustLevel.FEARFUL.value:
-    #             agent.trust = TrustLevel.NEUTRAL.value
-
     def broadcast_trust(self):
         """
         Nudge neighbors toward compassion if broadcasting is enabled.
@@ -70,12 +61,15 @@ class HumanAgent(mesa.Agent):
         if not self.enable_broadcast or self.trust <= 0:
             return
 
-        neighbor_ids = self.model.grid.get_neighbors(self.pos, include_center=False)
-        for nid in neighbor_ids:
-            agents = self.model.grid.get_cell_list_contents([nid])
+        # Get neighboring node IDs (not agents)
+        neighbor_nodes = list(self.model.G.neighbors(self.pos))
+
+        for node_id in neighbor_nodes:
+            agents = self.model.grid.get_cell_list_contents([node_id])
             for agent in agents:
                 if isinstance(agent, HumanAgent) and agent.trust < self.trust:
-                    agent.trust = min(agent.trust + 0.1, 1.0)  # Cap at +1.0
+                    agent.trust = min(agent.trust + 0.1, TrustLevel.COMPASSIONATE.value)
+
 
 
     def get_trust_label(self):
