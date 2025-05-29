@@ -1,34 +1,56 @@
 # Frankenstein Moral Drift: An Agent-Based Model of Social Rejection and Moral Deviation
 
-This repository contains the code and documentation for the **Frankenstein Moral Drift** agent-based model. The model simulates the emotional and behavioral transformation of a stigmatized agent, inspired by Mary Shelley's *Frankenstein*, through cumulative experiences of social rejection.
+This repository contains the code, outputs, and documentation for **ABM_Frankenstein**, an agent-based model that simulates how sustained social rejection affects the emotional trajectory and moral behavior of a stigmatized agent. Inspired by Mary Shelley's *Frankenstein* and grounded in psychological theory, the model explores how exclusion, stigma, and compassion shape moral drift over time.
 
----
 ## Project Overview
 
-This model investigates the research question:
+In the simulation, Frankenstein’s Creature begins as a peaceful and empathetic agent. Over time, repeated social rejection increases its **resentment** and decreases its **empathy**. When these emotions cross key thresholds, the Creature transitions into **Cautious** or **Vengeful** states. The model tracks this transformation based on:
 
-> **How does repeated social rejection influence the emotional trajectory and moral behavior of a stigmatized agent, as modeled through Frankenstein’s Creature?**
+- The type and frequency of interactions with human agents.
+- The structure of the social network.
+- Parameter variations including population composition, threshold sensitivity, and influence diffusion.
 
-Drawing on social psychology, affective neuroscience, and literary theory, the model operationalizes feedback-driven emotional drift where empathy decreases and resentment increases with each rejection, leading to a shift in moral behavior (peaceful → cautious → vengeful).
+The project investigates:  
+> **Under what social conditions can early inclusion prevent the moral collapse of a stigmatized agent?**
 
-## Model Structure
+## Model Features
 
-- **Grid**: 10×10 `MultiGrid` with four fixed landmarks: forest, village, cottage, and market.
-- **Agents**:
-  - `CreatureAgent`: a mobile agent with dynamic emotional states (`empathy`, `resentment`, `state`)
-  - `HumanAgent`: fixed agents with a `h_type` ("fearful", "neutral", "compassionate") that determine their interaction behavior
-- **State Transitions**:
-  - Emotional updates based on rejection/acceptance
-  - Moral state switches when resentment > `res_threshold` and empathy < `emp_threshold`
+- **CreatureAgent**: A central agent with mutable emotional states (`empathy`, `resentment`) and a dynamic moral state (`Peaceful`, `Cautious`, `Vengeful`).
+- **HumanAgent**: Agents with fixed trust dispositions:  
+  - `Fearful`: Always reject the Creature  
+  - `Neutral`: 50% chance to accept or reject  
+  - `Compassionate`: Always accept  
 
-## File Structure
+- **Social Network**: Watts-Strogatz small-world graph topology using NetworkX.
+- **Emotion Threshold Logic**: Transitions are governed by:
+  - `res_threshold`: If resentment exceeds this
+  - `emp_threshold`: If empathy drops below this
+- **Broadcasting**: Optional mechanism where compassionate humans influence neighbors' trust levels.
+- **Batch Mode**: Parameter sweeps across trust ratios, network features, and thresholds.
 
-| Path                                 | Description                                              |
-|--------------------------------------|----------------------------------------------------------|
-| [`model.py`](./model.py)            | Main model logic and environment                         |
-| [`agent.py`](./agent.py)            | Definitions for Creature and Human agents                |
-| [`README.md`](./README.md)          | Project documentation (this file)                        |
+## Batch Results
 
+The model includes batch-run analysis and plots showing key trends:
+
+- `avg_creature_state.png`: Average state of the Creature over time.
+- `avg_trust_over_time.png`: Count of Fearful, Neutral, Compassionate humans across steps.
+- `final_creature_state_dist.png`: Histogram of final moral state across multiple runs.
+- `compassionate_minus_fearful.png`: Difference between compassionate and fearful agents over time.
+- `batch_results.csv`: Aggregated simulation outputs for plotting and evaluation.
+
+All outputs can be found in the [`outputs/`](./outputs) folder.
+
+## Repository Structure
+
+ABM_Frankenstein/
+│
+├── agent.py               # Agent logic (Creature + Human)
+├── model.py               # Model initialization and step logic
+├── app.py                 # Solara-based interactive GUI
+├── run_batch.py           # Batch simulation script
+├── outputs/               # Simulation outputs (plots, .csv)
+├── README.md              # You are here
+└── __pycache__/           # Python cache files
 
 ---
 
