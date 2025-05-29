@@ -42,15 +42,17 @@ All outputs can be found in the [`outputs/`](./outputs) folder.
 
 ## Repository Structure
 
-ABM_Frankenstein/
-│
-├── agent.py               # Agent logic (Creature + Human)
-├── model.py               # Model initialization and step logic
-├── app.py                 # Solara-based interactive GUI
-├── run_batch.py           # Batch simulation script
-├── outputs/               # Simulation outputs (plots, .csv)
-├── README.md              # You are here
-└── __pycache__/           # Python cache files
+
+| File/Folder | Description |
+|-------------|-------------|
+| [`agent.py`](./agent.py) | Agent logic for both the Creature and Human agents |
+| [`model.py`](./model.py) | Model setup, step function, and network initialization |
+| [`app.py`](./app.py) | Solara-based interactive GUI to visualize the simulation |
+| [`run_batch.py`](./run_batch.py) | Batch simulation script for parameter sweeps |
+| [`outputs/`](./outputs) | Simulation outputs: plots and `.csv` results |
+| [`README.md`](./README.md) | You are here — project documentation |
+
+
 
 ---
 
